@@ -2,7 +2,7 @@ name: SSH Deployment Pipeline
  
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
  
 jobs:
   lint:
