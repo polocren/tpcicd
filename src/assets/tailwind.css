@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Webfont: Bitcount Grid Single
+   Place BitcountGridSingle.woff2 in public/fonts/ and/or have the font installed locally. */
+@font-face {
+  font-family: "Bitcount Grid Single";
+  src:
+    local("Bitcount Grid Single"),
+    url("/fonts/BitcountGridSingle.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Tailwind v4 theme override: use Bitcount as the sans stack */
+@theme {
+  --font-sans: "Bitcount Grid Single", ui-sans-serif, system-ui, sans-serif;
+}
