@@ -27,6 +27,13 @@
               aria-label="Premier nombre"
               class="no-spin flex-1 min-w-0 rounded-2xl border border-slate-700 bg-slate-700/60 px-4 py-3 text-slate-100 placeholder:text-slate-400 shadow-inner outline-none focus:ring-4 focus:ring-indigo-500/30"
               type="number"
+              step="any"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
+              @keydown="filterKeydown"
+              @paste="handlePaste"
+              @input="normalizeInput"
               v-model.number="a"
               placeholder="a"
             />
@@ -34,6 +41,13 @@
               aria-label="Second nombre"
               class="no-spin flex-1 min-w-0 rounded-2xl border border-slate-700 bg-slate-700/60 px-4 py-3 text-slate-100 placeholder:text-slate-400 shadow-inner outline-none focus:ring-4 focus:ring-indigo-500/30"
               type="number"
+              step="any"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
+              @keydown="filterKeydown"
+              @paste="handlePaste"
+              @input="normalizeInput"
               v-model.number="b"
               placeholder="b"
             />
@@ -68,10 +82,73 @@ export default {
     this.onPow();
   },
   methods: {
-    onAdd() { this.result = add(this.a, this.b); },
-    onSub() { this.result = sub(this.a, this.b); },
-    onMul() { this.result = mul(this.a, this.b); },
-    onPow() { this.result = pow(this.a, this.b); },
+    onAdd() { this.result = add(this.validNum(this.a), this.validNum(this.b)); },
+    onSub() { this.result = sub(this.validNum(this.a), this.validNum(this.b)); },
+    onMul() { this.result = mul(this.validNum(this.a), this.validNum(this.b)); },
+    onPow() { this.result = pow(this.validNum(this.a), this.validNum(this.b)); },
+    validNum(n) { return Number.isFinite(n) ? n : 0; },
+    normalizeInput(e) {
+      const el = e.target;
+      // Remplace les virgules par des points et supprime les chars illégaux restants
+      let v = String(el.value || '').replace(/,/g, '.');
+      // Garde uniquement: éventuel '-' en tête, chiffres, un seul '.'
+      const isNeg = v.startsWith('-');
+      v = v.replace(/[^0-9.-]/g, '');
+      // Retire les '-' non en tête
+      v = (isNeg ? '-' : '') + v.replace(/-/g, '');
+      // Un seul point
+      const parts = v.split('.');
+      if (parts.length > 2) v = parts.shift() + '.' + parts.join('');
+      if (el.value !== v) {
+        el.value = v;
+        // Re-déclenche l'événement input pour mettre à jour v-model.number
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    },
+    handlePaste(e) {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const el = e.target;
+      const before = el.value.slice(0, el.selectionStart || 0);
+      const after = el.value.slice(el.selectionEnd || 0);
+      let insert = String(text).replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+      // Filtrage '-' et '.' selon le contexte
+      const current = before + insert + after;
+      // Construit une version nettoyée
+      let v = current;
+      const isNeg = v.startsWith('-');
+      v = v.replace(/-/g, '');
+      v = (isNeg ? '-' : '') + v;
+      const p = v.split('.');
+      if (p.length > 2) v = p.shift() + '.' + p.join('');
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    filterKeydown(e) {
+      const allowedNav = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End'];
+      if (allowedNav.includes(e.key)) return;
+      // Raccourcis ctrl/cmd
+      if ((e.ctrlKey || e.metaKey) && ['a','c','v','x','z','y'].includes(e.key.toLowerCase())) return;
+      const el = e.target;
+      const v = String(el.value || '');
+      // Empêche 'e'/'E' et '+' (notation exponentielle)
+      if (e.key === 'e' || e.key === 'E' || e.key === '+') { e.preventDefault(); return; }
+      // Virgule -> autorisée mais on la normalise sur input; éviter multiples points/virgules
+      if (e.key === '.' || e.key === ',') {
+        if (v.includes('.') || v.includes(',')) { e.preventDefault(); }
+        return;
+      }
+      // Signe négatif seulement en première position
+      if (e.key === '-') {
+        const pos = el.selectionStart || 0;
+        if (pos !== 0 || v.includes('-')) e.preventDefault();
+        return;
+      }
+      // Chiffres 0-9 autorisés
+      if (e.key >= '0' && e.key <= '9') return;
+      // Tout le reste bloqué
+      e.preventDefault();
+    },
     formatNumber(n) {
       if (Number.isNaN(n)) return '—';
       try { return n.toLocaleString('fr-FR'); } catch { return String(n); }

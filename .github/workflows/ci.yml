@@ -3,7 +3,7 @@ name: SSH Deployment Pipeline
 on:
   push:
     branches: [ main ]
- 
+
 jobs:
   lint:
     name: Lint
@@ -87,4 +87,3 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             echo "déploiement terminé!"
- 
