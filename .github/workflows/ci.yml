@@ -43,7 +43,7 @@ jobs:
     name: Deploy via SSH
     needs: build_test_lint
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && (secrets.SSH_PASSWORD != '' || secrets.SSH_KEY != '')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Download dist artifact
         uses: actions/download-artifact@v4
@@ -51,39 +51,22 @@ jobs:
           name: dist
           path: dist
 
-      - name: Check secrets presence (sanitized)
-        run: |
-          echo "SSH_HOST set: ${{ secrets.SSH_HOST != '' }}"
-          echo "SSH_USER set: ${{ secrets.SSH_USER != '' }}"
-          echo "SSH_PASSWORD set: ${{ secrets.SSH_PASSWORD != '' }}"
-          echo "SSH_PORT set: ${{ secrets.SSH_PORT != '' }}"
-          echo "DEPLOY_PATH set: ${{ secrets.DEPLOY_PATH != '' }}"
-
-      - name: Test SSH connectivity
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            echo "SSH OK on $(hostname)"
-
       - name: Ensure deploy dir exists
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             mkdir -p ${{ secrets.DEPLOY_PATH }}
 
       - name: Copy files to server
-        uses: appleboy/scp-action@v0.1.8
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
+          # Auth: use key if provided, else password
+          key: ${{ secrets.SSH_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT || 22 }}
           source: "dist/*"
@@ -95,7 +78,7 @@ jobs:
       #   with:
       #     host: ${{ secrets.SSH_HOST }}
       #     username: ${{ secrets.SSH_USER }}
-      #     key: ${{ secrets.SSH_KEY }}
+      #     key: ${{ secrets.SSH_PASSWORD }}
       #     port: ${{ secrets.SSH_PORT || 22 }}
       #     script: |
       #       echo "Deploy completed on $(uname -n)"
